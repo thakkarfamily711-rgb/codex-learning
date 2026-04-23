@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Medical CRM MVP</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background: #f5f7fb; }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 16px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: 12px; }
+    .card { background: #fff; padding: 14px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    input, select, button { width: 100%; padding: 10px; margin-top: 8px; border: 1px solid #cfd7e6; border-radius: 8px; }
+    button { background: #2563eb; color: white; border: none; cursor: pointer; }
+    table { width: 100%; border-collapse: collapse; background: #fff; }
+    th, td { border-bottom: 1px solid #eee; padding: 10px; text-align: left; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Medical Field CRM & Automation (MVP Demo)</h1>
+
+    <section class="grid" id="kpis"></section>
+
+    <div class="grid" style="margin-top: 16px;">
+      <div class="card">
+        <h3>Add Hospital</h3>
+        <input id="hName" placeholder="Hospital Name" />
+        <input id="hCity" placeholder="City" />
+        <input id="hPhone" placeholder="Phone" />
+        <input id="hEmail" placeholder="Email" />
+        <input id="hFaculty" placeholder="Faculty tags (comma separated)" />
+        <button onclick="addHospital()">Save Hospital</button>
+      </div>
+
+      <div class="card">
+        <h3>Add Visit</h3>
+        <input id="vHospitalId" placeholder="Hospital ID" />
+        <input id="vDate" type="date" />
+        <input id="vFaculty" placeholder="Faculty" />
+        <input id="vFollowup" type="date" />
+        <button onclick="addVisit()">Save Visit + Follow-up</button>
+      </div>
+
+      <div class="card">
+        <h3>Add Order</h3>
+        <input id="oHospitalId" placeholder="Hospital ID" />
+        <input id="oDate" type="date" />
+        <input id="oFaculty" placeholder="Faculty" />
+        <input id="oValue" placeholder="Total Value" type="number" />
+        <button onclick="addOrder()">Save Order + Recommendation</button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <h3>Hospitals</h3>
+      <table>
+        <thead><tr><th>ID</th><th>Name</th><th>City</th><th>Faculty</th><th>Source</th></tr></thead>
+        <tbody id="hospitalRows"></tbody>
+      </table>
+    </div>
+  </div>
+
+<script>
+async function fetchJson(url, options) {
+  const res = await fetch(url, options);
+  return await res.json();
+}
+
+async function loadDashboard() {
+  const k = await fetchJson('/api/dashboard');
+  document.getElementById('kpis').innerHTML = [
+    ['Total Hospitals', k.totalHospitals],
+    ['Pending Follow-ups', k.pendingFollowups],
+    ['Orders This Month', k.ordersThisMonth],
+    ['Pending Recommendations', k.recommendations]
+  ].map(([t,v]) => `<div class='card'><h4>${t}</h4><div style='font-size:28px'>${v}</div></div>`).join('');
+}
+
+async function loadHospitals() {
+  const data = await fetchJson('/api/hospitals');
+  document.getElementById('hospitalRows').innerHTML = data.map(h =>
+    `<tr><td>${h.id}</td><td>${h.name}</td><td>${h.city || ''}</td><td>${h.faculty_tags || ''}</td><td>${h.source_type}</td></tr>`
+  ).join('');
+}
+
+async function addHospital() {
+  await fetchJson('/api/hospitals', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      name: hName.value, city: hCity.value, phone: hPhone.value, email: hEmail.value, faculty_tags: hFaculty.value
+    })
+  });
+  await refresh();
+}
+
+async function addVisit() {
+  await fetchJson('/api/visits', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      hospital_id: Number(vHospitalId.value), visit_date: vDate.value, faculty: vFaculty.value, next_followup_date: vFollowup.value
+    })
+  });
+  await refresh();
+}
+
+async function addOrder() {
+  await fetchJson('/api/orders', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      hospital_id: Number(oHospitalId.value), order_date: oDate.value, faculty: oFaculty.value, total_value: Number(oValue.value)
+    })
+  });
+  await refresh();
+}
+
+async function refresh() { await loadDashboard(); await loadHospitals(); }
+refresh();
+</script>
+</body>
+</html>
